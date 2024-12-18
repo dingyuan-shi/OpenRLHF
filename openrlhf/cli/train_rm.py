@@ -196,6 +196,7 @@ if __name__ == "__main__":
     # RM training
     parser.add_argument("--max_epochs", type=int, default=1)
     parser.add_argument("--aux_loss_coef", type=float, default=0, help="MoE balancing loss")
+    parser.add_argument("--aux_mean_punish_loss_coef", type=float, default=0, help="Non zero mean loss")
     parser.add_argument("--compute_fp32_loss", action="store_true", default=False)
     parser.add_argument("--margin_loss", action="store_true", default=False)
     parser.add_argument("--learning_rate", type=float, default=9e-6)

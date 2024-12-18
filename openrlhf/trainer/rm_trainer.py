@@ -60,6 +60,7 @@ class RewardModelTrainer(ABC):
 
         # Mixtral 8*7b
         self.aux_loss = self.args.aux_loss_coef > 1e-8
+        self.aux_mean_punish = self.args.aux_mean_punish_loss_coef > 1e-8
 
         # packing samples
         self.packing_samples = strategy.args.packing_samples
@@ -159,11 +160,20 @@ class RewardModelTrainer(ABC):
                     reject_reward = reject_reward.float()
 
                 preference_loss = self.loss_fn(chosen_reward, reject_reward, margin)
+
+                mean_punish_loss = 0.0
+                if self.aux_mean_punish:
+                    mean_punish_loss = torch.mean((chosen_reward + reject_reward) ** 2)
+
                 # mixtral
                 if not self.aux_loss:
                     aux_loss = 0
 
-                loss = preference_loss + aux_loss * self.args.aux_loss_coef
+                loss = (
+                    preference_loss
+                    + aux_loss * self.args.aux_loss_coef
+                    + mean_punish_loss * self.args.aux_mean_punish_loss_coef
+                )
                 self.strategy.backward(loss, self.model, self.optimizer)
                 self.strategy.optimizer_step(self.optimizer, self.model, self.scheduler)
 
@@ -178,6 +188,7 @@ class RewardModelTrainer(ABC):
                     "reject_reward": reject_reward.mean().item(),
                     "loss_mean": loss_mean,
                     "acc_mean": acc_mean,
+                    "mean_punish_loss": mean_punish_loss.item(),
                     "lr": self.scheduler.get_last_lr()[0],
                 }
                 if self.aux_loss:
