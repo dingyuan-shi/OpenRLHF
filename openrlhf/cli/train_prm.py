@@ -190,6 +190,7 @@ if __name__ == "__main__":
         type=str,
         default="prm_%s" % datetime.now().strftime("%m%dT%H:%M"),
     )
+    parser.add_argument("--use_tensorboard", type=str, default=None, help="TensorBoard logging path")
 
     args = parser.parse_args()
 
