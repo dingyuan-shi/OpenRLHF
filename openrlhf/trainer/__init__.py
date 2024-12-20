@@ -3,8 +3,10 @@ from .kd_trainer import KDTrainer
 from .kto_trainer import KTOTrainer
 from .ppo_trainer import PPOTrainer
 from .prm_trainer import ProcessRewardModelTrainer
+from .prm_trainer_linearhead import ProcessRewardModelTrainerLinearHead
 from .rm_trainer import RewardModelTrainer
 from .sft_trainer import SFTTrainer
+
 
 __all__ = [
     "DPOTrainer",
@@ -13,5 +15,6 @@ __all__ = [
     "PPOTrainer",
     "ProcessRewardModelTrainer",
     "RewardModelTrainer",
+    "ProcessRewardModelTrainerLinearHead",
     "SFTTrainer",
 ]

@@ -36,6 +36,7 @@ def get_llm_for_sequence_regression(
     value_head_prefix="score",
     device_map=None,
     packing_samples=False,
+    gather=True,
     **kwargs,
 ) -> nn.Module:
     """Retrieve a transformer model with a sequence regression head on top.
@@ -106,6 +107,7 @@ def get_llm_for_sequence_regression(
         torch_dtype=torch.bfloat16 if bf16 else "auto",
         quantization_config=nf4_config,
         device_map=device_map,
+        gather=gather,  # TODO: not good, what about critic?
         **kwargs,
     )
 
@@ -160,11 +162,12 @@ def _get_reward_model(base_pretrained_model, base_llm_model, value_head_prefix="
     class RewardModel(base_pretrained_model):
         supports_gradient_checkpointing = True
 
-        def __init__(self, config: AutoConfig):
+        def __init__(self, config: AutoConfig, gather=True):
             super().__init__(config)
             setattr(self, self.base_model_prefix, base_llm_model(config))
 
             self.value_head_prefix = value_head_prefix
+            self.gather = gather
             setattr(self, value_head_prefix, nn.Linear(config.hidden_size, 1, bias=False))
 
             self.packing_samples = packing_samples
@@ -214,12 +217,18 @@ def _get_reward_model(base_pretrained_model, base_llm_model, value_head_prefix="
                 else:
                     reward = values
                 # TODO: convert packed_seq_lens into torch tensor in advance
-                packed_seq_lens = torch.tensor(packed_seq_lens, device=values.device)
-                eos_indices = packed_seq_lens.cumsum(dim=0) - 1
-                reward = reward.squeeze(0).gather(dim=0, index=eos_indices)
+                if self.gather:
+                    packed_seq_lens = torch.tensor(packed_seq_lens, device=values.device)
+                    eos_indices = packed_seq_lens.cumsum(dim=0) - 1
+                    reward = reward.squeeze(0).gather(dim=0, index=eos_indices)
             else:
-                eos_indices = attention_mask.size(1) - 1 - attention_mask.long().fliplr().argmax(dim=1, keepdim=True)
-                reward = values.gather(dim=1, index=eos_indices).squeeze(1)
+                if self.gather:
+                    eos_indices = (
+                        attention_mask.size(1) - 1 - attention_mask.long().fliplr().argmax(dim=1, keepdim=True)
+                    )
+                    reward = values.gather(dim=1, index=eos_indices).squeeze(1)
+                else:
+                    reward = values
 
             if not self.training and self.normalize_reward:
                 reward = (reward - self.mean) / self.std
