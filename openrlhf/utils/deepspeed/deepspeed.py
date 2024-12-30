@@ -358,6 +358,7 @@ class DeepspeedStrategy(ABC):
                 for filename in os.listdir(train_from_model_path):
                     if filename.endswith(".py"):
                         shutil.copy(os.path.join(train_from_model_path, filename), os.path.join(output_dir, filename))
+        dist.barrier()
 
     def all_reduce(self, data, op="mean"):
         assert op in ("mean", "max", "sum")
