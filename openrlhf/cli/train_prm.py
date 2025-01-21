@@ -177,6 +177,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--input_key", type=str, default="input", help="JSON dataset key")
     parser.add_argument("--label_key", type=str, default="label", help="JSON dataset key")
+    parser.add_argument("--process_key", type=str, default="", help="JSON dataset key")
     parser.add_argument("--max_samples", type=int, default=1e8, help="Max number of samples")
     parser.add_argument("--max_len", type=int, default=2048, help="Max tokens for the samples")
 

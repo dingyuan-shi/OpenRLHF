@@ -35,6 +35,7 @@ class ProcessRewardDataset(Dataset):
 
         # chat_template
         self.input_key = getattr(self.strategy.args, "input_key", None)
+        self.process_key = getattr(self.strategy.args, "process_key", None)
         self.label_key = getattr(self.strategy.args, "label_key", None)
         self.placeholder_token = getattr(self.strategy.args, "placeholder_token", None)
         self.reward_tokens = getattr(self.strategy.args, "reward_tokens", None)
@@ -43,6 +44,8 @@ class ProcessRewardDataset(Dataset):
 
         # Store the processed data in class attributes
         self.inputs = dataset[self.input_key]
+        if self.process_key:
+            self.answer = dataset[self.process_key]
         self.labels = dataset[self.label_key]
 
     def __len__(self):
@@ -50,8 +53,12 @@ class ProcessRewardDataset(Dataset):
         return length
 
     def __getitem__(self, idx):
+        if self.process_key:
+            input_text = f"{self.inputs[idx]} {self.answer[idx]}"
+        else:
+            input_text = self.inputs[idx]
         input_token = self.tokenizer(
-            self.inputs[idx],
+            input_text,
             max_length=self.max_length,
             padding=False,
             truncation=True,
