@@ -77,9 +77,11 @@ def get_llm_for_sequence_regression(
 
     base_class = AutoModel._model_mapping[type(config)]
     base_pretrained_class = base_class.__base__
+    gather_flag = True
     if model_type == "reward":
         cls_class = _get_reward_model(base_pretrained_class, base_class, value_head_prefix, packing_samples)
     else:
+        gather_flag = False
         cls_class = _get_critic_model(base_pretrained_class, base_class, value_head_prefix, packing_samples)
 
     # Note: dschf is defined in function scope to avoid global effects
@@ -99,17 +101,27 @@ def get_llm_for_sequence_regression(
         )
     else:
         nf4_config = None
-
-    model = cls_class.from_pretrained(
-        model_name_or_path,
-        config=config,
-        trust_remote_code=True,
-        torch_dtype=torch.bfloat16 if bf16 else "auto",
-        quantization_config=nf4_config,
-        device_map=device_map,
-        gather=gather,  # TODO: not good, what about critic?
-        **kwargs,
-    )
+    if gather_flag:
+        model = cls_class.from_pretrained(
+            model_name_or_path,
+            config=config,
+            trust_remote_code=True,
+            torch_dtype=torch.bfloat16 if bf16 else "auto",
+            quantization_config=nf4_config,
+            device_map=device_map,
+            gather=gather,  # TODO: not good, what about critic? currently it is ugly
+            **kwargs,
+        )
+    else:
+        model = cls_class.from_pretrained(
+            model_name_or_path,
+            config=config,
+            trust_remote_code=True,
+            torch_dtype=torch.bfloat16 if bf16 else "auto",
+            quantization_config=nf4_config,
+            device_map=device_map,
+            **kwargs,
+        )
 
     # LoRA
     if lora_rank > 0:
